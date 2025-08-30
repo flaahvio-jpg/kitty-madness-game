@@ -290,13 +290,25 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     checkWinCondition();
   }, [fishCount, hasReachedScratcher, checkWinCondition]);
 
-  // Key handling
+  // Key handling with preventDefault for arrow keys
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    keysRef.current.add(e.key.toLowerCase());
+    const key = e.key.toLowerCase();
+    keysRef.current.add(key);
+    
+    // Prevent default behavior for game controls to stop page scrolling
+    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'w', 'a', 's', 'd'].includes(key)) {
+      e.preventDefault();
+    }
   }, []);
 
   const handleKeyUp = useCallback((e: KeyboardEvent) => {
-    keysRef.current.delete(e.key.toLowerCase());
+    const key = e.key.toLowerCase();
+    keysRef.current.delete(key);
+    
+    // Prevent default behavior for game controls
+    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'w', 'a', 's', 'd'].includes(key)) {
+      e.preventDefault();
+    }
   }, []);
 
   // Collision detection
@@ -522,29 +534,17 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
         break;
     }
     
-    // Draw kitty body with gradient
-    const gradient = ctx.createLinearGradient(
-      kitty.current.x, 
-      kitty.current.y, 
-      kitty.current.x, 
-      kitty.current.y + kitty.current.height
-    );
-    gradient.addColorStop(0, '#f472b6');
-    gradient.addColorStop(1, '#ec4899');
-    
-    ctx.fillStyle = gradient;
-    ctx.save();
-    ctx.translate(kitty.current.x + kitty.current.width/2, kitty.current.y + kitty.current.height/2);
-    ctx.scale(scaleX, scaleY);
-    ctx.fillRect(-kitty.current.width/2, -kitty.current.height/2 + yOffset, kitty.current.width, kitty.current.height);
-    ctx.restore();
+    // Remove the gradient body drawing (pink background)
+    // Only draw the kitty image
     
     // Draw kitty image with animation
     if (kittyImageRef.current) {
       ctx.save();
       ctx.translate(kitty.current.x + kitty.current.width/2, kitty.current.y + kitty.current.height/2 + yOffset);
       ctx.scale(scaleX, scaleY);
-      ctx.drawImage(kittyImageRef.current, -kitty.current.width/2, -kitty.current.height/2, kitty.current.width, kitty.current.height);
+      // Draw larger kitty (increase size)
+      const kittySize = kitty.current.width * 1.2;
+      ctx.drawImage(kittyImageRef.current, -kittySize/2, -kittySize/2, kittySize, kittySize);
       ctx.restore();
     } else {
       // Fallback to emoji while image loads
