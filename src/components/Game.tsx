@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import kittyImage from '@/assets/kitty.png';
 
 interface GameObject {
   x: number;
@@ -304,8 +305,12 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas
-    ctx.fillStyle = '#fef7f7';
+    // Clear canvas with gradient background
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+    bgGradient.addColorStop(0, '#87CEEB'); // Sky blue
+    bgGradient.addColorStop(0.7, '#98FB98'); // Light green
+    bgGradient.addColorStop(1, '#90EE90'); // Green
+    ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // Handle input and animations
@@ -524,11 +529,14 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     ctx.fillRect(-kitty.current.width/2, -kitty.current.height/2 + yOffset, kitty.current.width, kitty.current.height);
     ctx.restore();
     
-    // Draw kitty emoji with animation
-    ctx.font = '28px Arial';
-    ctx.textAlign = 'center';
-    const emojiY = kitty.current.y + 25 + yOffset;
-    ctx.fillText('🐱', kitty.current.x + kitty.current.width/2, emojiY);
+    // Draw kitty image with animation
+    const kittyImg = new Image();
+    kittyImg.src = kittyImage;
+    ctx.save();
+    ctx.translate(kitty.current.x + kitty.current.width/2, kitty.current.y + kitty.current.height/2 + yOffset);
+    ctx.scale(scaleX, scaleY);
+    ctx.drawImage(kittyImg, -kitty.current.width/2, -kitty.current.height/2, kitty.current.width, kitty.current.height);
+    ctx.restore();
     
     // Add sparkle effect when moving
     if (kitty.current.animationState === 'walk' && kitty.current.animationFrame % 10 === 0) {
