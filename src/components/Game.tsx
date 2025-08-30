@@ -532,11 +532,20 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     // Draw kitty image with animation
     const kittyImg = new Image();
     kittyImg.src = kittyImage;
-    ctx.save();
-    ctx.translate(kitty.current.x + kitty.current.width/2, kitty.current.y + kitty.current.height/2 + yOffset);
-    ctx.scale(scaleX, scaleY);
-    ctx.drawImage(kittyImg, -kitty.current.width/2, -kitty.current.height/2, kitty.current.width, kitty.current.height);
-    ctx.restore();
+    
+    // Wait for image to load and draw it
+    if (kittyImg.complete) {
+      ctx.save();
+      ctx.translate(kitty.current.x + kitty.current.width/2, kitty.current.y + kitty.current.height/2 + yOffset);
+      ctx.scale(scaleX, scaleY);
+      ctx.drawImage(kittyImg, -kitty.current.width/2, -kitty.current.height/2, kitty.current.width, kitty.current.height);
+      ctx.restore();
+    } else {
+      // Fallback to emoji while image loads
+      ctx.font = '28px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('🐱', kitty.current.x + kitty.current.width/2, kitty.current.y + 25 + yOffset);
+    }
     
     // Add sparkle effect when moving
     if (kitty.current.animationState === 'walk' && kitty.current.animationFrame % 10 === 0) {
