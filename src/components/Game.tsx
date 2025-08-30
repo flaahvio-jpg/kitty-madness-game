@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 interface GameObject {
   x: number;
@@ -28,7 +27,12 @@ interface Fish {
   collected: boolean;
 }
 
-export const Game = ({ user, onBackToProfile }: { user: any; onBackToProfile: () => void }) => {
+interface GameProps {
+  user?: any;
+  onBackToProfile?: () => void;
+}
+
+export const Game = ({ user, onBackToProfile }: GameProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const keysRef = useRef<Set<string>>(new Set());
@@ -74,9 +78,14 @@ export const Game = ({ user, onBackToProfile }: { user: any; onBackToProfile: ()
   const CANVAS_HEIGHT = 600;
 
   const saveGameResult = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('Modo demo - progresso não salvo');
+      return;
+    }
     
     try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
       // Save individual game
       await supabase.from('games').insert({
         user_id: user.id,
@@ -342,6 +351,11 @@ export const Game = ({ user, onBackToProfile }: { user: any; onBackToProfile: ()
             🐱 Kitty Madness
           </h1>
           <p className="text-muted-foreground">Colete todos os peixinhos antes do tempo acabar!</p>
+          {!user && (
+            <p className="text-sm text-muted-foreground mt-2">
+              ⚠️ Modo demo - progresso não será salvo
+            </p>
+          )}
         </div>
 
         <Button 
@@ -352,12 +366,14 @@ export const Game = ({ user, onBackToProfile }: { user: any; onBackToProfile: ()
           🎮 Iniciar Jogo
         </Button>
 
-        <Button 
-          onClick={onBackToProfile}
-          variant="outline"
-        >
-          Voltar ao Perfil
-        </Button>
+        {onBackToProfile && (
+          <Button 
+            onClick={onBackToProfile}
+            variant="outline"
+          >
+            Voltar ao Perfil
+          </Button>
+        )}
       </div>
     );
   }
@@ -402,12 +418,14 @@ export const Game = ({ user, onBackToProfile }: { user: any; onBackToProfile: ()
             >
               Jogar Novamente
             </Button>
-            <Button 
-              onClick={onBackToProfile}
-              variant="outline"
-            >
-              Perfil
-            </Button>
+            {onBackToProfile && (
+              <Button 
+                onClick={onBackToProfile}
+                variant="outline"
+              >
+                Perfil
+              </Button>
+            )}
           </div>
         </Card>
       )}
