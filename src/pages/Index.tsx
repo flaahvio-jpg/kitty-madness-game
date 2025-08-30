@@ -1,9 +1,9 @@
-import { Game } from '@/components/Game';
+import { GameContainer } from '@/components/GameContainer';
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
-      <Game />
+      <GameContainer />
     </div>
   );
 };

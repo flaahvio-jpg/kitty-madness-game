@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface GameObject {
   x: number;
@@ -26,15 +28,17 @@ interface Fish {
   collected: boolean;
 }
 
-export const Game = () => {
+export const Game = ({ user, onBackToProfile }: { user: any; onBackToProfile: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const keysRef = useRef<Set<string>>(new Set());
   
   const [score, setScore] = useState(0);
+  const [fishCount, setFishCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
+  const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [gameStarted, setGameStarted] = useState(false);
-  const [gameOver, setGameOver] = useState(false);
+  const { toast } = useToast();
 
   // Game objects
   const kitty = useRef<GameObject>({
@@ -69,6 +73,86 @@ export const Game = () => {
   const CANVAS_WIDTH = 800;
   const CANVAS_HEIGHT = 600;
 
+  const saveGameResult = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // Save individual game
+      await supabase.from('games').insert({
+        user_id: user.id,
+        fish_collected: fishCount,
+        score: score,
+        time_taken: 60 - timeLeft
+      });
+
+      // Update user stats
+      const { data: currentStats } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (currentStats) {
+        await supabase
+          .from('user_stats')
+          .update({
+            total_fish: currentStats.total_fish + fishCount,
+            games_played: currentStats.games_played + 1,
+            best_score: Math.max(currentStats.best_score, score)
+          })
+          .eq('user_id', user.id);
+      } else {
+        await supabase
+          .from('user_stats')
+          .insert({
+            user_id: user.id,
+            total_fish: fishCount,
+            games_played: 1,
+            best_score: score
+          });
+      }
+    } catch (error) {
+      console.error('Error saving game:', error);
+    }
+  }, [user, fishCount, score, timeLeft]);
+
+  const checkWinCondition = useCallback(() => {
+    if (fishCount === 5) {
+      setGameStatus('won');
+      saveGameResult();
+      toast({
+        title: "🎉 Parabéns!",
+        description: `Você coletou todos os peixinhos! Score: ${score}`,
+      });
+    }
+  }, [fishCount, saveGameResult, score, toast]);
+
+  // Timer effect
+  useEffect(() => {
+    if (!gameStarted || gameStatus !== 'playing') return;
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          setGameStatus('lost');
+          saveGameResult();
+          toast({
+            title: "⏰ Tempo esgotado!",
+            description: `Você coletou ${fishCount} peixinhos. Score: ${score}`,
+          });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [gameStarted, gameStatus, saveGameResult, fishCount, score, toast]);
+
+  useEffect(() => {
+    checkWinCondition();
+  }, [fishCount, checkWinCondition]);
+
   // Key handling
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     keysRef.current.add(e.key.toLowerCase());
@@ -88,7 +172,7 @@ export const Game = () => {
 
   // Game loop
   const gameLoop = useCallback(() => {
-    if (!canvasRef.current || gameOver) return;
+    if (!canvasRef.current || gameStatus !== 'playing') return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -159,7 +243,11 @@ export const Game = () => {
       if (!fish.collected && checkCollision(kitty.current, fish)) {
         fish.collected = true;
         setScore(prev => prev + 10);
-        toast('🐟 Peixinho coletado! +10 pontos');
+        setFishCount(prev => prev + 1);
+        toast({
+          title: "🐟 Peixinho coletado!",
+          description: "+10 pontos",
+        });
       }
     });
 
@@ -187,33 +275,8 @@ export const Game = () => {
     ctx.font = '24px Arial';
     ctx.fillText('🐱', kitty.current.x + 8, kitty.current.y + 25);
 
-    // Check win condition
-    const allFishCollected = fishes.current.every(fish => fish.collected);
-    if (allFishCollected && !gameOver) {
-      setGameOver(true);
-      toast('🎉 Parabéns! Você coletou todos os peixinhos!');
-    }
-
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [gameOver]);
-
-  // Timer effect
-  useEffect(() => {
-    if (!gameStarted || gameOver) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          setGameOver(true);
-          toast('⏰ Tempo esgotado!');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [gameStarted, gameOver]);
+  }, [gameStatus, toast]);
 
   // Setup and cleanup
   useEffect(() => {
@@ -236,8 +299,9 @@ export const Game = () => {
   const startGame = () => {
     setGameStarted(true);
     setScore(0);
+    setFishCount(0);
     setTimeLeft(60);
-    setGameOver(false);
+    setGameStatus('playing');
     
     // Reset kitty position
     kitty.current = {
@@ -252,13 +316,17 @@ export const Game = () => {
     // Reset fishes
     fishes.current.forEach(fish => fish.collected = false);
     
-    toast('🎮 Jogo iniciado! Use WASD ou setas para mover');
+    toast({
+      title: "🎮 Jogo iniciado!",
+      description: "Use WASD ou setas para mover",
+    });
   };
 
   const resetGame = () => {
     setGameStarted(false);
-    setGameOver(false);
+    setGameStatus('playing');
     setScore(0);
+    setFishCount(0);
     setTimeLeft(60);
     
     if (animationRef.current) {
@@ -266,15 +334,46 @@ export const Game = () => {
     }
   };
 
+  if (!gameStarted) {
+    return (
+      <div className="min-h-screen bg-gradient-background flex flex-col items-center justify-center gap-6 p-6">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
+            🐱 Kitty Madness
+          </h1>
+          <p className="text-muted-foreground">Colete todos os peixinhos antes do tempo acabar!</p>
+        </div>
+
+        <Button 
+          onClick={startGame}
+          className="bg-gradient-primary hover:opacity-90"
+          size="lg"
+        >
+          🎮 Iniciar Jogo
+        </Button>
+
+        <Button 
+          onClick={onBackToProfile}
+          variant="outline"
+        >
+          Voltar ao Perfil
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center gap-6 p-6">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-2 text-foreground">🐱 Kitty Madness</h1>
+        <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
+          🐱 Kitty Madness
+        </h1>
         <p className="text-muted-foreground">Colete todos os peixinhos antes do tempo acabar!</p>
       </div>
 
       <div className="flex gap-6 text-lg font-semibold">
         <div className="text-primary">Score: {score}</div>
+        <div className="text-accent">Peixinhos: {fishCount}/5</div>
         <div className="text-accent">Tempo: {timeLeft}s</div>
       </div>
 
@@ -288,27 +387,32 @@ export const Game = () => {
         />
       </Card>
 
-      <div className="flex gap-4">
-        {!gameStarted && !gameOver && (
-          <button
-            onClick={startGame}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors shadow-md"
-          >
-            🎮 Iniciar Jogo
-          </button>
-        )}
-        
-        {gameOver && (
-          <button
-            onClick={resetGame}
-            className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-semibold hover:bg-accent/90 transition-colors shadow-md"
-          >
-            🔄 Jogar Novamente
-          </button>
-        )}
-      </div>
+      {gameStatus !== 'playing' && (
+        <Card className="p-6 text-center">
+          <div className="text-2xl font-bold mb-4">
+            {gameStatus === 'won' ? '🎉 Parabéns!' : '⏰ Tempo Esgotado!'}
+          </div>
+          <div className="mb-4 text-muted-foreground">
+            Score Final: {score} | Peixinhos: {fishCount}/5
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={resetGame}
+              className="bg-gradient-primary hover:opacity-90"
+            >
+              Jogar Novamente
+            </Button>
+            <Button 
+              onClick={onBackToProfile}
+              variant="outline"
+            >
+              Perfil
+            </Button>
+          </div>
+        </Card>
+      )}
 
-      {gameStarted && (
+      {gameStarted && gameStatus === 'playing' && (
         <div className="text-center text-sm text-muted-foreground">
           <p>🎮 Use WASD ou setas para mover</p>
           <p>⬆️ Pule nas plataformas para alcançar os peixinhos!</p>
