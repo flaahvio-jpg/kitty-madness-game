@@ -230,7 +230,8 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
       fishes.current[index]?.collected
     );
     
-    if (allFishCollected && carriedFish > 0 && hasReachedScratcher) {
+    // Complete level when all fish are collected AND player reaches scratcher
+    if (allFishCollected && hasReachedScratcher) {
       // Level completed - delivered fish to scratcher
       setScore(prev => prev + carriedFish * 50); // Bonus for delivery
       nextLevel();
@@ -261,7 +262,7 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
 
   useEffect(() => {
     checkWinCondition();
-  }, [fishCount, checkWinCondition]);
+  }, [fishCount, hasReachedScratcher, checkWinCondition]);
 
   // Key handling
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
