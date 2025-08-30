@@ -18,18 +18,7 @@ export const GameContainer = () => {
   const [useMockMode, setUseMockMode] = useState(false);
 
   useEffect(() => {
-    // Check if Supabase is properly configured
-    const hasSupabaseConfig = import.meta.env.VITE_SUPABASE_URL && 
-                             import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    if (!hasSupabaseConfig) {
-      console.log('Supabase não configurado - usando modo de demonstração');
-      setUseMockMode(true);
-      setLoading(false);
-      return;
-    }
-
-    // Only import and use Supabase if it's configured
+    // Since Supabase is now configured, proceed with authentication
     import('@/integrations/supabase/client').then(({ supabase }) => {
       // Get initial session
       supabase.auth.getSession().then(({ data: { session } }) => {
@@ -45,6 +34,11 @@ export const GameContainer = () => {
       });
 
       return () => subscription.unsubscribe();
+    }).catch(() => {
+      // Fallback to demo mode if Supabase import fails
+      console.log('Supabase não configurado - usando modo de demonstração');
+      setUseMockMode(true);
+      setLoading(false);
     });
   }, []);
 
@@ -58,6 +52,10 @@ export const GameContainer = () => {
 
   // Demo mode when Supabase is not configured
   if (useMockMode) {
+    if (currentView === 'game') {
+      return <Game onBackToProfile={() => setCurrentView('profile')} />;
+    }
+    
     return (
       <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md bg-card/90 backdrop-blur border-border/30">
