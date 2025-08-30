@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Auth } from '@/components/Auth';
 import { UserProfile } from '@/components/UserProfile';
 import { Game } from '@/components/Game';
+import { MultiplayerLobby } from '@/components/MultiplayerLobby';
+import { MultiplayerGame } from '@/components/MultiplayerGame';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -14,7 +16,8 @@ const mockUser = {
 export const GameContainer = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'profile' | 'game'>('profile');
+  const [currentView, setCurrentView] = useState<'profile' | 'game' | 'multiplayer' | 'multiplayer-game'>('profile');
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [useMockMode, setUseMockMode] = useState(false);
 
   useEffect(() => {
@@ -41,6 +44,16 @@ export const GameContainer = () => {
       setLoading(false);
     });
   }, []);
+
+  const handleJoinRoom = (roomId: string) => {
+    setCurrentRoomId(roomId);
+    setCurrentView('multiplayer-game');
+  };
+
+  const handleLeaveRoom = () => {
+    setCurrentRoomId(null);
+    setCurrentView('multiplayer');
+  };
 
   if (loading) {
     return (
@@ -99,10 +112,31 @@ export const GameContainer = () => {
     );
   }
 
+  if (currentView === 'multiplayer') {
+    return (
+      <MultiplayerLobby
+        user={user}
+        onJoinRoom={handleJoinRoom}
+        onBackToProfile={() => setCurrentView('profile')}
+      />
+    );
+  }
+
+  if (currentView === 'multiplayer-game' && currentRoomId) {
+    return (
+      <MultiplayerGame
+        user={user}
+        roomId={currentRoomId}
+        onLeaveRoom={handleLeaveRoom}
+      />
+    );
+  }
+
   return (
     <UserProfile 
       user={user} 
-      onStartGame={() => setCurrentView('game')} 
+      onStartGame={() => setCurrentView('game')}
+      onStartMultiplayer={() => setCurrentView('multiplayer')}
     />
   );
 };

@@ -10,9 +10,10 @@ interface UserStats {
   best_score: number;
 }
 
-export const UserProfile = ({ user, onStartGame }: { 
+export const UserProfile = ({ user, onStartGame, onStartMultiplayer }: { 
   user: any; 
   onStartGame: () => void;
+  onStartMultiplayer: () => void;
 }) => {
   const [stats, setStats] = useState<UserStats>({ total_fish: 0, games_played: 0, best_score: 0 });
   const [loading, setLoading] = useState(true);
@@ -58,7 +59,7 @@ export const UserProfile = ({ user, onStartGame }: {
       <Card className="w-full max-w-md bg-card/90 backdrop-blur border-border/30">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            🐱 Kitty Madness
+            🐱 Theoness
           </CardTitle>
           <CardDescription>
             Bem-vindo, {user.email}!
@@ -87,13 +88,21 @@ export const UserProfile = ({ user, onStartGame }: {
           )}
           
           <div className="space-y-3">
-            <Button 
-              onClick={onStartGame}
-              className="w-full bg-gradient-primary hover:opacity-90"
-              size="lg"
-            >
-              🎮 Jogar Agora
-            </Button>
+            <div className="grid gap-3">
+              <Button 
+                onClick={onStartGame}
+                className="w-full bg-gradient-primary hover:opacity-90 h-14 text-lg"
+              >
+                🎮 Modo Solo
+              </Button>
+              
+              <Button 
+                onClick={onStartMultiplayer}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 h-14 text-lg"
+              >
+                👥 Multiplayer
+              </Button>
+            </div>
             
             <Button 
               onClick={handleSignOut}

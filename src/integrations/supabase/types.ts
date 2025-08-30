@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          message_type: string
+          player_name: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          message_type?: string
+          player_name: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          message_type?: string
+          player_name?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       games: {
         Row: {
           created_at: string
@@ -38,6 +76,89 @@ export type Database = {
           score?: number
           time_taken?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      room_players: {
+        Row: {
+          fish_collected: number
+          id: string
+          is_online: boolean
+          is_ready: boolean
+          joined_at: string
+          player_name: string
+          position_x: number
+          position_y: number
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          fish_collected?: number
+          id?: string
+          is_online?: boolean
+          is_ready?: boolean
+          joined_at?: string
+          player_name: string
+          position_x?: number
+          position_y?: number
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          fish_collected?: number
+          id?: string
+          is_online?: boolean
+          is_ready?: boolean
+          joined_at?: string
+          player_name?: string
+          position_x?: number
+          position_y?: number
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          current_level: number
+          id: string
+          max_players: number
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          current_level?: number
+          id?: string
+          max_players?: number
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          current_level?: number
+          id?: string
+          max_players?: number
+          name?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -76,7 +197,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_room_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

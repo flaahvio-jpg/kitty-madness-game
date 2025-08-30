@@ -157,6 +157,25 @@ All colors MUST be HSL.
     border: 1px solid hsl(var(--border) / 0.5);
     box-shadow: var(--shadow-soft);
   }
+  
+  .chat-message-own {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.1));
+    border-left: 4px solid hsl(var(--primary));
+  }
+  
+  .chat-message-other {
+    background: linear-gradient(135deg, hsl(var(--muted) / 0.3), hsl(var(--muted) / 0.1));
+    border-left: 4px solid hsl(var(--muted));
+  }
+  
+  .chat-message-system {
+    background: linear-gradient(135deg, hsl(var(--secondary) / 0.3), hsl(var(--secondary) / 0.1));
+    border-left: 4px solid hsl(var(--secondary));
+  }
+  
+  .multiplayer-player {
+    filter: drop-shadow(0 2px 8px hsl(var(--primary) / 0.3));
+  }
 }
 
 @keyframes kitty-idle {
