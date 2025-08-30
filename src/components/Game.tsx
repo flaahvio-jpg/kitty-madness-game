@@ -51,6 +51,7 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const keysRef = useRef<Set<string>>(new Set());
+  const kittyImageRef = useRef<HTMLImageElement | null>(null);
   
   const [score, setScore] = useState(0);
   const [fishCount, setFishCount] = useState(0);
@@ -61,6 +62,15 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
   const [gameStarted, setGameStarted] = useState(false);
   const [hasReachedScratcher, setHasReachedScratcher] = useState(false);
   const { toast } = useToast();
+
+  // Load kitty image
+  useEffect(() => {
+    const img = new Image();
+    img.src = kittyImage;
+    img.onload = () => {
+      kittyImageRef.current = img;
+    };
+  }, []);
 
   // Game objects
   const kitty = useRef<GameObject & { 
@@ -530,15 +540,11 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     ctx.restore();
     
     // Draw kitty image with animation
-    const kittyImg = new Image();
-    kittyImg.src = kittyImage;
-    
-    // Wait for image to load and draw it
-    if (kittyImg.complete) {
+    if (kittyImageRef.current) {
       ctx.save();
       ctx.translate(kitty.current.x + kitty.current.width/2, kitty.current.y + kitty.current.height/2 + yOffset);
       ctx.scale(scaleX, scaleY);
-      ctx.drawImage(kittyImg, -kitty.current.width/2, -kitty.current.height/2, kitty.current.width, kitty.current.height);
+      ctx.drawImage(kittyImageRef.current, -kitty.current.width/2, -kitty.current.height/2, kitty.current.width, kitty.current.height);
       ctx.restore();
     } else {
       // Fallback to emoji while image loads
