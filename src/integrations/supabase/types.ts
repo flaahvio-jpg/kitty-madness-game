@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      games: {
+        Row: {
+          created_at: string
+          fish_collected: number
+          id: string
+          score: number
+          time_taken: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fish_collected?: number
+          id?: string
+          score?: number
+          time_taken?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fish_collected?: number
+          id?: string
+          score?: number
+          time_taken?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          best_score: number
+          created_at: string
+          games_played: number
+          id: string
+          total_fish: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_score?: number
+          created_at?: string
+          games_played?: number
+          id?: string
+          total_fish?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_score?: number
+          created_at?: string
+          games_played?: number
+          id?: string
+          total_fish?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
