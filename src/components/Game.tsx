@@ -242,10 +242,9 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     if (allFishCollected && hasReachedScratcher) {
       console.log('LEVEL COMPLETED!');
       // Level completed - delivered fish to scratcher
-      setScore(prev => prev + carriedFish * 50); // Bonus for delivery
       nextLevel();
     }
-  }, [currentLevel, carriedFish, hasReachedScratcher, nextLevel]);
+  }, [currentLevel, hasReachedScratcher, nextLevel]);
 
   // Timer effect
   useEffect(() => {
