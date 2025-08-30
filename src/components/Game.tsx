@@ -27,6 +27,20 @@ interface Fish {
   collected: boolean;
 }
 
+interface Scratcher {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface Level {
+  platforms: Platform[];
+  fishes: Fish[];
+  scratcher: Scratcher;
+  playerStart: { x: number; y: number };
+}
+
 interface GameProps {
   user?: any;
   onBackToProfile?: () => void;
@@ -39,9 +53,12 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
   
   const [score, setScore] = useState(0);
   const [fishCount, setFishCount] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [carriedFish, setCarriedFish] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(90);
+  const [currentLevel, setCurrentLevel] = useState(0);
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [gameStarted, setGameStarted] = useState(false);
+  const [hasReachedScratcher, setHasReachedScratcher] = useState(false);
   const { toast } = useToast();
 
   // Game objects
@@ -54,22 +71,70 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     vy: 0
   });
 
-  const platforms = useRef<Platform[]>([
-    { x: 0, y: 580, width: 800, height: 20 }, // Ground
-    { x: 200, y: 450, width: 150, height: 20 },
-    { x: 450, y: 350, width: 120, height: 20 },
-    { x: 100, y: 250, width: 100, height: 20 },
-    { x: 600, y: 200, width: 120, height: 20 },
-    { x: 350, y: 150, width: 100, height: 20 },
+  // Game levels configuration
+  const levels = useRef<Level[]>([
+    // Nível 1 - Básico
+    {
+      platforms: [
+        { x: 0, y: 580, width: 800, height: 20 }, // Ground
+        { x: 200, y: 450, width: 150, height: 20 },
+        { x: 500, y: 400, width: 100, height: 20 },
+        { x: 150, y: 300, width: 120, height: 20 },
+      ],
+      fishes: [
+        { x: 250, y: 420, width: 25, height: 20, collected: false },
+        { x: 530, y: 370, width: 25, height: 20, collected: false },
+      ],
+      scratcher: { x: 700, y: 530, width: 60, height: 50 },
+      playerStart: { x: 50, y: 530 }
+    },
+    // Nível 2 - Torres altas
+    {
+      platforms: [
+        { x: 0, y: 580, width: 800, height: 20 }, // Ground
+        { x: 100, y: 450, width: 80, height: 20 },
+        { x: 300, y: 350, width: 80, height: 20 },
+        { x: 150, y: 250, width: 80, height: 20 },
+        { x: 400, y: 150, width: 80, height: 20 },
+        { x: 600, y: 200, width: 120, height: 20 },
+      ],
+      fishes: [
+        { x: 430, y: 120, width: 25, height: 20, collected: false },
+        { x: 180, y: 220, width: 25, height: 20, collected: false },
+        { x: 630, y: 170, width: 25, height: 20, collected: false },
+      ],
+      scratcher: { x: 720, y: 530, width: 60, height: 50 },
+      playerStart: { x: 30, y: 530 }
+    },
+    // Nível 3 - Labirinto complexo
+    {
+      platforms: [
+        { x: 0, y: 580, width: 800, height: 20 }, // Ground
+        { x: 100, y: 500, width: 100, height: 20 },
+        { x: 300, y: 450, width: 100, height: 20 },
+        { x: 500, y: 400, width: 100, height: 20 },
+        { x: 650, y: 350, width: 100, height: 20 },
+        { x: 100, y: 350, width: 80, height: 20 },
+        { x: 300, y: 250, width: 80, height: 20 },
+        { x: 500, y: 200, width: 80, height: 20 },
+        { x: 200, y: 150, width: 100, height: 20 },
+        { x: 450, y: 100, width: 80, height: 20 },
+      ],
+      fishes: [
+        { x: 530, y: 170, width: 25, height: 20, collected: false },
+        { x: 230, y: 120, width: 25, height: 20, collected: false },
+        { x: 480, y: 70, width: 25, height: 20, collected: false },
+        { x: 680, y: 320, width: 25, height: 20, collected: false },
+      ],
+      scratcher: { x: 50, y: 530, width: 60, height: 50 },
+      playerStart: { x: 720, y: 530 }
+    }
   ]);
 
-  const fishes = useRef<Fish[]>([
-    { x: 250, y: 420, width: 25, height: 20, collected: false },
-    { x: 500, y: 320, width: 25, height: 20, collected: false },
-    { x: 130, y: 220, width: 25, height: 20, collected: false },
-    { x: 650, y: 170, width: 25, height: 20, collected: false },
-    { x: 380, y: 120, width: 25, height: 20, collected: false },
-  ]);
+  const currentLevelData = levels.current[currentLevel];
+  const platforms = useRef<Platform[]>(currentLevelData?.platforms || []);
+  const fishes = useRef<Fish[]>(currentLevelData?.fishes || []);
+  const scratcher = useRef<Scratcher>(currentLevelData?.scratcher || { x: 0, y: 0, width: 0, height: 0 });
 
   const GRAVITY = 0.5;
   const JUMP_FORCE = -12;
@@ -125,16 +190,52 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     }
   }, [user, fishCount, score, timeLeft]);
 
-  const checkWinCondition = useCallback(() => {
-    if (fishCount === 5) {
+  const nextLevel = useCallback(() => {
+    if (currentLevel < levels.current.length - 1) {
+      setCurrentLevel(prev => prev + 1);
+      setTimeLeft(prev => prev + 30); // Bonus time for completing level
+      setCarriedFish(0);
+      setHasReachedScratcher(false);
+      
+      // Update level data references
+      const newLevelData = levels.current[currentLevel + 1];
+      platforms.current = newLevelData.platforms;
+      fishes.current = newLevelData.fishes.map(f => ({ ...f, collected: false }));
+      scratcher.current = newLevelData.scratcher;
+      
+      // Reset kitty position to level start
+      kitty.current.x = newLevelData.playerStart.x;
+      kitty.current.y = newLevelData.playerStart.y;
+      kitty.current.vx = 0;
+      kitty.current.vy = 0;
+      
+      toast({
+        title: `🎯 Nível ${currentLevel + 2}!`,
+        description: "Novo desafio desbloqueado!",
+      });
+    } else {
+      // All levels completed
       setGameStatus('won');
       saveGameResult();
       toast({
-        title: "🎉 Parabéns!",
-        description: `Você coletou todos os peixinhos! Score: ${score}`,
+        title: "🏆 Jogo Completo!",
+        description: `Você completou todos os níveis! Score Final: ${score}`,
       });
     }
-  }, [fishCount, saveGameResult, score, toast]);
+  }, [currentLevel, score, saveGameResult, toast]);
+
+  const checkWinCondition = useCallback(() => {
+    const currentLevelFishes = levels.current[currentLevel].fishes;
+    const allFishCollected = currentLevelFishes.every((_, index) => 
+      fishes.current[index]?.collected
+    );
+    
+    if (allFishCollected && carriedFish > 0 && hasReachedScratcher) {
+      // Level completed - delivered fish to scratcher
+      setScore(prev => prev + carriedFish * 50); // Bonus for delivery
+      nextLevel();
+    }
+  }, [currentLevel, carriedFish, hasReachedScratcher, nextLevel]);
 
   // Timer effect
   useEffect(() => {
@@ -253,18 +354,39 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
         fish.collected = true;
         setScore(prev => prev + 10);
         setFishCount(prev => prev + 1);
+        setCarriedFish(prev => prev + 1);
         toast({
           title: "🐟 Peixinho coletado!",
-          description: "+10 pontos",
+          description: `+10 pontos | Carregando: ${carriedFish + 1} peixe(s)`,
         });
       }
     });
+
+    // Scratcher collision - delivery point
+    if (checkCollision(kitty.current, scratcher.current)) {
+      if (!hasReachedScratcher && carriedFish > 0) {
+        setHasReachedScratcher(true);
+        setScore(prev => prev + carriedFish * 20); // Bonus for reaching scratcher with fish
+        toast({
+          title: "🪚 Arranhador alcançado!",
+          description: `Entregue ${carriedFish} peixe(s) - Bônus: +${carriedFish * 20} pontos!`,
+        });
+      }
+    } else {
+      setHasReachedScratcher(false);
+    }
 
     // Draw platforms
     ctx.fillStyle = '#a16207';
     platforms.current.forEach(platform => {
       ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
     });
+
+    // Draw scratcher (goal)
+    ctx.fillStyle = hasReachedScratcher ? '#22c55e' : '#8b5cf6';
+    ctx.fillRect(scratcher.current.x, scratcher.current.y, scratcher.current.width, scratcher.current.height);
+    ctx.font = '20px Arial';
+    ctx.fillText('🪚', scratcher.current.x + 20, scratcher.current.y + 30);
 
     // Draw fishes
     fishes.current.forEach(fish => {
@@ -309,25 +431,31 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     setGameStarted(true);
     setScore(0);
     setFishCount(0);
-    setTimeLeft(60);
+    setCarriedFish(0);
+    setCurrentLevel(0);
+    setTimeLeft(90);
     setGameStatus('playing');
+    setHasReachedScratcher(false);
     
-    // Reset kitty position
+    // Initialize first level
+    const firstLevel = levels.current[0];
+    platforms.current = firstLevel.platforms;
+    fishes.current = firstLevel.fishes.map(f => ({ ...f, collected: false }));
+    scratcher.current = firstLevel.scratcher;
+    
+    // Reset kitty position to level start
     kitty.current = {
-      x: 100,
-      y: 300,
+      x: firstLevel.playerStart.x,
+      y: firstLevel.playerStart.y,
       width: 40,
       height: 40,
       vx: 0,
       vy: 0
     };
-
-    // Reset fishes
-    fishes.current.forEach(fish => fish.collected = false);
     
     toast({
-      title: "🎮 Jogo iniciado!",
-      description: "Use WASD ou setas para mover",
+      title: "🎮 Nível 1 iniciado!",
+      description: "Colete peixes e leve-os ao arranhador 🪚",
     });
   };
 
@@ -387,9 +515,11 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
         <p className="text-muted-foreground">Colete todos os peixinhos antes do tempo acabar!</p>
       </div>
 
-      <div className="flex gap-6 text-lg font-semibold">
+      <div className="flex gap-4 text-lg font-semibold flex-wrap justify-center">
         <div className="text-primary">Score: {score}</div>
-        <div className="text-accent">Peixinhos: {fishCount}/5</div>
+        <div className="text-accent">Nível: {currentLevel + 1}/{levels.current.length}</div>
+        <div className="text-accent">Coletados: {fishCount}</div>
+        <div className="text-orange-500">Carregando: {carriedFish} 🐟</div>
         <div className="text-accent">Tempo: {timeLeft}s</div>
       </div>
 
