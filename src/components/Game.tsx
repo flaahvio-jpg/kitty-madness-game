@@ -62,13 +62,20 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
   const { toast } = useToast();
 
   // Game objects
-  const kitty = useRef<GameObject>({
+  const kitty = useRef<GameObject & { 
+    animationState: 'idle' | 'walk' | 'jump';
+    animationFrame: number;
+    facingDirection: 'left' | 'right';
+  }>({
     x: 100,
     y: 300,
     width: 40,
     height: 40,
     vx: 0,
-    vy: 0
+    vy: 0,
+    animationState: 'idle',
+    animationFrame: 0,
+    facingDirection: 'right'
   });
 
   // Game levels configuration
@@ -301,13 +308,18 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     ctx.fillStyle = '#fef7f7';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Handle input
+    // Handle input and animations
     if (keysRef.current.has('a') || keysRef.current.has('arrowleft')) {
       kitty.current.vx = -MOVE_SPEED;
+      kitty.current.facingDirection = 'left';
+      kitty.current.animationState = 'walk';
     } else if (keysRef.current.has('d') || keysRef.current.has('arrowright')) {
       kitty.current.vx = MOVE_SPEED;
+      kitty.current.facingDirection = 'right';
+      kitty.current.animationState = 'walk';
     } else {
       kitty.current.vx *= 0.8; // Friction
+      kitty.current.animationState = 'idle';
     }
 
     // Jump
@@ -323,6 +335,7 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
       
       if (onPlatform) {
         kitty.current.vy = JUMP_FORCE;
+        kitty.current.animationState = 'jump';
       }
     }
 
@@ -388,35 +401,142 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
       setHasReachedScratcher(false);
     }
 
-    // Draw platforms
-    ctx.fillStyle = '#a16207';
+    // Draw platforms with enhanced graphics
     platforms.current.forEach(platform => {
+      const gradient = ctx.createLinearGradient(0, platform.y, 0, platform.y + platform.height);
+      gradient.addColorStop(0, '#d97706');
+      gradient.addColorStop(1, '#92400e');
+      ctx.fillStyle = gradient;
       ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+      
+      // Add platform border
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
     });
 
-    // Draw scratcher (goal)
-    ctx.fillStyle = hasReachedScratcher ? '#22c55e' : '#8b5cf6';
+    // Draw scratcher (goal) with enhanced graphics
+    const scratcherGradient = ctx.createLinearGradient(
+      scratcher.current.x, scratcher.current.y,
+      scratcher.current.x, scratcher.current.y + scratcher.current.height
+    );
+    
+    if (hasReachedScratcher) {
+      scratcherGradient.addColorStop(0, '#4ade80');
+      scratcherGradient.addColorStop(1, '#15803d');
+      ctx.shadowColor = '#22c55e';
+      ctx.shadowBlur = 20;
+    } else {
+      scratcherGradient.addColorStop(0, '#a855f7');
+      scratcherGradient.addColorStop(1, '#6b21a8');
+    }
+    
+    ctx.fillStyle = scratcherGradient;
     ctx.fillRect(scratcher.current.x, scratcher.current.y, scratcher.current.width, scratcher.current.height);
-    ctx.font = '20px Arial';
-    ctx.fillText('🪚', scratcher.current.x + 20, scratcher.current.y + 30);
+    
+    // Animated scratcher emoji
+    const scratcherScale = hasReachedScratcher ? 1 + Math.sin(kitty.current.animationFrame * 0.2) * 0.1 : 1;
+    ctx.save();
+    ctx.translate(scratcher.current.x + 30, scratcher.current.y + 30);
+    ctx.scale(scratcherScale, scratcherScale);
+    ctx.font = '24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('🪚', 0, 0);
+    ctx.restore();
+    
+    ctx.shadowBlur = 0;
 
-    // Draw fishes
-    fishes.current.forEach(fish => {
+    // Draw fishes with floating animation
+    fishes.current.forEach((fish, index) => {
       if (!fish.collected) {
-        ctx.fillStyle = '#f97316';
-        ctx.fillRect(fish.x, fish.y, fish.width, fish.height);
-        // Fish emoji
-        ctx.font = '16px Arial';
-        ctx.fillText('🐟', fish.x, fish.y + 15);
+        const floatY = Math.sin((kitty.current.animationFrame + index * 30) * 0.05) * 3;
+        
+        // Fish glow effect
+        ctx.save();
+        ctx.shadowColor = '#f97316';
+        ctx.shadowBlur = 10;
+        
+        // Fish body
+        const fishGradient = ctx.createRadialGradient(
+          fish.x + fish.width/2, fish.y + fish.height/2 + floatY, 0,
+          fish.x + fish.width/2, fish.y + fish.height/2 + floatY, fish.width
+        );
+        fishGradient.addColorStop(0, '#fb923c');
+        fishGradient.addColorStop(1, '#ea580c');
+        ctx.fillStyle = fishGradient;
+        ctx.fillRect(fish.x, fish.y + floatY, fish.width, fish.height);
+        
+        // Fish emoji with float effect
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🐟', fish.x + fish.width/2, fish.y + 15 + floatY);
+        
+        ctx.restore();
       }
     });
 
-    // Draw kitty
-    ctx.fillStyle = '#ec4899';
-    ctx.fillRect(kitty.current.x, kitty.current.y, kitty.current.width, kitty.current.height);
-    // Kitty emoji
-    ctx.font = '24px Arial';
-    ctx.fillText('🐱', kitty.current.x + 8, kitty.current.y + 25);
+    // Update animation frame
+    kitty.current.animationFrame += 1;
+
+    // Draw kitty with enhanced graphics and animations
+    ctx.save();
+    
+    // Apply facing direction
+    if (kitty.current.facingDirection === 'left') {
+      ctx.scale(-1, 1);
+      ctx.translate(-kitty.current.x * 2 - kitty.current.width, 0);
+    }
+    
+    // Animation effects based on state
+    let yOffset = 0;
+    let scaleX = 1;
+    let scaleY = 1;
+    
+    switch (kitty.current.animationState) {
+      case 'idle':
+        yOffset = Math.sin(kitty.current.animationFrame * 0.05) * 1;
+        scaleX = 1 + Math.sin(kitty.current.animationFrame * 0.03) * 0.02;
+        break;
+      case 'walk':
+        yOffset = Math.sin(kitty.current.animationFrame * 0.3) * 2;
+        scaleX = 1 + Math.sin(kitty.current.animationFrame * 0.4) * 0.05;
+        break;
+      case 'jump':
+        scaleY = 1.1;
+        scaleX = 0.9;
+        break;
+    }
+    
+    // Draw kitty body with gradient
+    const gradient = ctx.createLinearGradient(
+      kitty.current.x, 
+      kitty.current.y, 
+      kitty.current.x, 
+      kitty.current.y + kitty.current.height
+    );
+    gradient.addColorStop(0, '#f472b6');
+    gradient.addColorStop(1, '#ec4899');
+    
+    ctx.fillStyle = gradient;
+    ctx.save();
+    ctx.translate(kitty.current.x + kitty.current.width/2, kitty.current.y + kitty.current.height/2);
+    ctx.scale(scaleX, scaleY);
+    ctx.fillRect(-kitty.current.width/2, -kitty.current.height/2 + yOffset, kitty.current.width, kitty.current.height);
+    ctx.restore();
+    
+    // Draw kitty emoji with animation
+    ctx.font = '28px Arial';
+    ctx.textAlign = 'center';
+    const emojiY = kitty.current.y + 25 + yOffset;
+    ctx.fillText('🐱', kitty.current.x + kitty.current.width/2, emojiY);
+    
+    // Add sparkle effect when moving
+    if (kitty.current.animationState === 'walk' && kitty.current.animationFrame % 10 === 0) {
+      ctx.font = '12px Arial';
+      ctx.fillText('✨', kitty.current.x + Math.random() * 40, kitty.current.y + Math.random() * 40);
+    }
+    
+    ctx.restore();
 
     animationRef.current = requestAnimationFrame(gameLoop);
   }, [gameStatus, toast]);
@@ -462,7 +582,10 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
       width: 40,
       height: 40,
       vx: 0,
-      vy: 0
+      vy: 0,
+      animationState: 'idle',
+      animationFrame: 0,
+      facingDirection: 'right'
     };
     
     toast({
@@ -487,8 +610,8 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     return (
       <div className="min-h-screen bg-gradient-background flex flex-col items-center justify-center gap-6 p-6">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
-            🐱 Kitty Madness
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent animate-float">
+            🐱 Theoness
           </h1>
           <p className="text-muted-foreground">Colete todos os peixinhos antes do tempo acabar!</p>
           {!user && (
@@ -522,26 +645,43 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     <div className="flex flex-col items-center gap-6 p-6">
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
-          🐱 Kitty Madness
+          🐱 Theoness
         </h1>
         <p className="text-muted-foreground">Colete todos os peixinhos antes do tempo acabar!</p>
       </div>
 
-      <div className="flex gap-4 text-lg font-semibold flex-wrap justify-center">
-        <div className="text-primary">Score: {score}</div>
-        <div className="text-accent">Nível: {currentLevel + 1}/{levels.current.length}</div>
-        <div className="text-accent">Coletados: {fishCount}</div>
-        <div className="text-orange-500">Carregando: {carriedFish} 🐟</div>
-        <div className="text-accent">Tempo: {timeLeft}s</div>
+      <div className="game-ui-card p-4 rounded-2xl">
+        <div className="flex gap-6 text-lg font-semibold flex-wrap justify-center items-center">
+          <div className="flex items-center gap-2 text-primary">
+            <span className="text-2xl">⭐</span>
+            <span>{score}</span>
+          </div>
+          <div className="flex items-center gap-2 text-accent">
+            <span className="text-xl">🎯</span>
+            <span>Nível {currentLevel + 1}/{levels.current.length}</span>
+          </div>
+          <div className="flex items-center gap-2 text-accent">
+            <span className="text-xl">🏆</span>
+            <span>{fishCount}</span>
+          </div>
+          <div className="flex items-center gap-2 text-fish-orange">
+            <span className="text-xl animate-float">🐟</span>
+            <span>{carriedFish}</span>
+          </div>
+          <div className="flex items-center gap-2 text-destructive">
+            <span className="text-xl">⏰</span>
+            <span>{timeLeft}s</span>
+          </div>
+        </div>
       </div>
 
-      <Card className="p-2 shadow-lg">
+      <Card className="p-2 shadow-lg game-ui-card">
         <canvas 
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-border rounded-lg"
-          style={{ background: 'linear-gradient(180deg, #e0f2fe 0%, #fef7f7 100%)' }}
+          className="border-2 border-primary/30 rounded-lg shadow-inner"
+          style={{ background: 'var(--gradient-sky)' }}
         />
       </Card>
 

@@ -60,8 +60,8 @@ export const GameContainer = () => {
       <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md bg-card/90 backdrop-blur border-border/30">
           <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              🐱 Kitty Madness
+            <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent animate-float">
+              🐱 Theoness
             </CardTitle>
             <CardDescription>
               Modo demonstração - Para salvar progresso, conecte ao Supabase
