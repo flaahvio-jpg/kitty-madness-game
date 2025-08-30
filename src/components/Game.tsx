@@ -61,6 +61,7 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [gameStarted, setGameStarted] = useState(false);
   const [hasReachedScratcher, setHasReachedScratcher] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const { toast } = useToast();
 
   // Load kitty image
@@ -69,6 +70,11 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
     img.src = kittyImage;
     img.onload = () => {
       kittyImageRef.current = img;
+      setImageLoaded(true);
+      console.log('Kitty image loaded successfully');
+    };
+    img.onerror = () => {
+      console.error('Failed to load kitty image');
     };
   }, []);
 
@@ -534,22 +540,20 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
         break;
     }
     
-    // Remove the gradient body drawing (pink background)
-    // Only draw the kitty image
-    
-    // Draw kitty image with animation
-    if (kittyImageRef.current) {
+    // Draw kitty image with animation (no background shape)
+    if (imageLoaded && kittyImageRef.current) {
       ctx.save();
       ctx.translate(kitty.current.x + kitty.current.width/2, kitty.current.y + kitty.current.height/2 + yOffset);
       ctx.scale(scaleX, scaleY);
-      // Draw larger kitty (increase size)
-      const kittySize = kitty.current.width * 1.2;
+      // Draw larger kitty (50% bigger)
+      const kittySize = kitty.current.width * 1.5;
       ctx.drawImage(kittyImageRef.current, -kittySize/2, -kittySize/2, kittySize, kittySize);
       ctx.restore();
     } else {
       // Fallback to emoji while image loads
       ctx.font = '28px Arial';
       ctx.textAlign = 'center';
+      ctx.fillStyle = '#ec4899';
       ctx.fillText('🐱', kitty.current.x + kitty.current.width/2, kitty.current.y + 25 + yOffset);
     }
     
