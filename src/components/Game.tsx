@@ -230,8 +230,17 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
       fishes.current[index]?.collected
     );
     
+    console.log('Checking win condition:', {
+      allFishCollected,
+      hasReachedScratcher,
+      currentLevelFishes: currentLevelFishes.length,
+      fishesState: fishes.current.map(f => f.collected),
+      carriedFish
+    });
+    
     // Complete level when all fish are collected AND player reaches scratcher
     if (allFishCollected && hasReachedScratcher) {
+      console.log('LEVEL COMPLETED!');
       // Level completed - delivered fish to scratcher
       setScore(prev => prev + carriedFish * 50); // Bonus for delivery
       nextLevel();
@@ -365,6 +374,7 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
 
     // Scratcher collision - delivery point
     if (checkCollision(kitty.current, scratcher.current)) {
+      console.log('Touching scratcher! hasReachedScratcher:', hasReachedScratcher, 'carriedFish:', carriedFish);
       if (!hasReachedScratcher && carriedFish > 0) {
         setHasReachedScratcher(true);
         setScore(prev => prev + carriedFish * 20); // Bonus for reaching scratcher with fish
@@ -372,6 +382,8 @@ export const Game = ({ user, onBackToProfile }: GameProps) => {
           title: "🪚 Arranhador alcançado!",
           description: `Entregue ${carriedFish} peixe(s) - Bônus: +${carriedFish * 20} pontos!`,
         });
+      } else if (!hasReachedScratcher) {
+        setHasReachedScratcher(true);
       }
     } else {
       setHasReachedScratcher(false);
